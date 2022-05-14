@@ -11,6 +11,16 @@ kotlin {
     // macosX64('native') { // on macOS
     linuxX64('native') { // on Linux
     // mingwX64('native') { // on Windows
+
+        compilations.main.cinterops {
+            kitty_util {
+                // Def-file describing the native API.
+                defFile project.file("src/nativeInterop/cinterop/kitty_util.def")
+                compilerOpts '-Isrc/nativeInterop/cinterop', '-I/usr/include'
+                includeDirs("/usr/include/")
+            }
+        }
+
         binaries {
             executable()
         }

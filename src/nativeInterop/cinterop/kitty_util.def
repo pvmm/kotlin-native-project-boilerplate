@@ -1,0 +1,2 @@
+compilerOpts = -DHAVE_ZLIB=1
+headers = /usr/include/zlib.h kitty_util.h kitty_extra.h
