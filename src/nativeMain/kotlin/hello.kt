@@ -6,15 +6,10 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 //import kotlinx.cinterop.readValue
 
-fun check_graphics_support2()
-{
-
-}
-
 fun main() {
     var width : UShort?
     var height : UShort?
-    var local_term : Boolean?
+    /* var local_exec : Boolean? */
 
     memScoped {
         kitty_setup_termios();
@@ -36,13 +31,20 @@ fun main() {
             return
         }
 
-        local_term = check_local_filesystem()
+        check_local_execution().let {
+            kitty_restore_termios();
+            if (it) {
+                println("* Local execution detected.")
+            } else {
+                println("* Non-local execution detected.")
+            }
+            it;
+        }
 
-        /* kitty_restore_termios(); */
         kitty_restore_termios();
         println("* Window size is $width x $height.")
         println("* Graphics support is OK.")
-        println("* Is filesystem local? " + local_term)
+        print_error_msg();
 
         return;
     }
