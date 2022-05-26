@@ -156,12 +156,15 @@ static bool store_image(unsigned int id, const char* fname)
 
 
 struct Image {
+    int x;
+    int y;
     unsigned int id;
     unsigned int placement;
     unsigned int zindex;
 };
 
-static bool _image_cmd(const char* command, struct Image* data)
+
+static bool _display_image_cmd(const char* command, struct Image* data)
 {
     line line = kitty_send_term(command);
     kdata k = kitty_parse_response(line);
@@ -196,29 +199,29 @@ static bool _image_cmd(const char* command, struct Image* data)
 
 static bool display_image(unsigned int id)
 {
-    struct Image data = { id, 0, 0 };
+    struct Image data = { 0, 0, id, 0, 0 };
 
     // prepare command
     char command[25];
     snprintf(command, 25, ESC "_Ga=p,i=%u" ESC BKS, id);
-    return _image_cmd(command, &data);
+    return _display_image_cmd(command, &data);
 }
 
 
 static bool display_image2(unsigned int id, unsigned int placement)
 {
-    struct Image data = { id, placement, 0 };
+    struct Image data = { 0, 0, id, placement, 0 };
 
     // prepare command
     char command[25];
     snprintf(command, 25, ESC "_Ga=p,i=%u,p=%u" ESC BKS, id, placement);
-    return _image_cmd(command, &data);
+    return _display_image_cmd(command, &data);
 }
 
 
 static bool display_image3(unsigned int id, unsigned int placement, unsigned int zindex)
 {
-    struct Image data = { id, placement, zindex };
+    struct Image data = { 0, 0, id, placement, zindex };
 
     // prepare command
     char command[25];

@@ -9,6 +9,10 @@ import kotlinx.cinterop.ptr
 fun main() {
     var width : UShort?
     var height : UShort?
+    var rows: UShort?
+    var cols: UShort?
+    var cell_w: UInt?
+    var cell_h: UInt?
     var local_exec : Boolean?
 
     memScoped {
@@ -19,6 +23,10 @@ fun main() {
         if (get_window_size(size.ptr)) {
             width = size.ws_xpixel
             height = size.ws_ypixel
+            cols = size.ws_col
+            rows = size.ws_row
+            cell_w = size.ws_xpixel / size.ws_col
+            cell_h = size.ws_ypixel / size.ws_row
         } else {
             die("Kitty required: window size is unknown.")
             return
@@ -50,6 +58,8 @@ fun main() {
 
         kitty_restore_termios();
         println("* Window size is $width x $height.")
+        println("* Window size is $cols x $rows cells.")
+        println("* Cell size is $cell_w x $cell_h.")
         println("* Graphics support is OK.")
 
         return;
