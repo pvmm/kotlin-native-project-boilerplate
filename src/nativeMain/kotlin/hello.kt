@@ -9,42 +9,51 @@ import kotlinx.cinterop.ptr
 fun main() {
     var width : UShort?
     var height : UShort?
-    /* var local_exec : Boolean? */
+    var local_exec : Boolean?
 
     memScoped {
-        kitty_setup_termios();
+        kitty_setup_termios()
 
         val size = alloc<winsize>()
 
         if (get_window_size(size.ptr)) {
-            width = size.ws_xpixel;
-            height = size.ws_ypixel;
+            width = size.ws_xpixel
+            height = size.ws_ypixel
         } else {
-            kitty_restore_termios();
-            println("Kitty required: window size is unknown.")
+            die("Kitty required: window size is unknown.")
             return
         }
 
         if (!check_graphics_support()) {
-            kitty_restore_termios();
-            println("Kitty required: graphics support not supported.")
+            die("Kitty required: graphics support not supported.")
             return
         }
 
-        check_local_execution().let {
-            kitty_restore_termios();
+        local_exec = check_local_execution().let {
+            kitty_restore_termios()
             if (it) {
                 println("* Local execution detected.")
             } else {
                 println("* Non-local execution detected.")
             }
+            kitty_setup_termios()
             it;
+        }
+
+        val moo = store_image(1, "./assets/moo.png").let {
+            kitty_restore_termios()
+            if (it) {
+                println("* Image stored successfully.")
+            } else {
+                println("* Image couldn't be stored.")
+            }
+            kitty_setup_termios()
         }
 
         kitty_restore_termios();
         println("* Window size is $width x $height.")
         println("* Graphics support is OK.")
-        print_error_msg();
+        //print_error_msg();
 
         return;
     }

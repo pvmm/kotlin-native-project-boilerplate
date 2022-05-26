@@ -3,7 +3,7 @@
 all:
 	gradle clean nativeBinaries
 
-run: all
+run: build/bin/native/debugExecutable/native-sample.kexe
 	./build/bin/native/debugExecutable/native-sample.kexe
 
 clean:

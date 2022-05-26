@@ -1,15 +1,36 @@
 #ifndef KITTY_EXTRA
 #define KITTY_EXTRA
 
+#include <time.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <stdbool.h>
 #include <string.h>
 
-#define ESC "\x1B"
+#define ESC "\x1B" /* ESCAPE */
+#define BKS "\x5c" /* BACKSLASH */
 
 char error_msg[256] = "\0";
+
+static void print_error_msg()
+{
+    if (error_msg[0]) {
+        kitty_restore_termios();
+        printf("* %s\n", error_msg);
+	kitty_setup_termios();
+    }
+}
+
+
+static void die(const char* msg)
+{
+    kitty_restore_termios();
+    printf("* %s\n", msg);
+    exit(1);
+}
+
 
 static bool get_window_size(struct winsize *sz)
 {
@@ -21,10 +42,23 @@ static bool get_window_size(struct winsize *sz)
 }
 
 
+static bool get_random_number()
+{
+    static bool first_time = true;
+
+    if (first_time) {
+        srand(time(NULL));
+        first_time = false;
+    }
+
+    return abs(rand());
+}
+
+
 static bool check_graphics_support()
 {
     // sending RGB(f=24) image with ID(i)=1 and width(s)=1 and height(v)=1
-    static char* graphics_query = ESC "_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1B\\" ESC "[c";
+    static char* graphics_query = ESC "_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA" ESC BKS ESC "[c";
     line line = { 0, { 0 }};
 
     line = kitty_send_term(graphics_query);
@@ -44,8 +78,9 @@ static bool check_local_execution()
     base64_encode(strlen(buf), buf, BASE64_SIZE, buf64);
 
     // prepare query
-    char local_query[BASE64_SIZE + 23];
-    snprintf(local_query, BASE64_SIZE + 23, ESC "_Ga=q,i=31,f=100,t=f;%s" ESC "\\", buf64);
+    unsigned int id = 1;
+    char local_query[BASE64_SIZE + 25];
+    snprintf(local_query, BASE64_SIZE + 25, ESC "_Ga=q,i=%i,f=100,t=f;%s" ESC BKS, id, buf64);
     line line = { 0, { 0 }};
 
     line = kitty_send_term(local_query);
@@ -56,21 +91,61 @@ static bool check_local_execution()
             return true;
         }
 
+        char response[50];
+        snprintf(response, 50, ESC "_Gi=%i;", id);
+
         for (int i = 0, j = 0; i < k.data.r + 1; ++i) {
             if (k.data.buf[i] > 31) {
                 error_msg[j++] = k.data.buf[i];
             }
         }
+
+	die(error_msg);
     }
 
     return false;
 }
 
-static void print_error_msg()
+
+static bool store_image(int id, const char *fname)
 {
-    if (error_msg[0]) {
-        printf("%s\n", error_msg);
+    char buf[PATH_MAX];
+    const size_t BASE64_SIZE = ((PATH_MAX + 2) / 3) * 4;
+    char buf64[BASE64_SIZE];
+
+    // get absolute path and convert to base64
+    realpath(fname, buf);
+    base64_encode(strlen(buf), buf, BASE64_SIZE, buf64);
+
+    // prepare query
+    char local_query[BASE64_SIZE + 25];
+    snprintf(local_query, BASE64_SIZE + 25, ESC "_Gi=%i,f=100,t=f;%s" ESC BKS, id, buf64);
+    line line = { 0, { 0 }};
+
+    line = kitty_send_term(local_query);
+    kdata k = kitty_parse_response(line);
+
+    if (k.data.r > 0) {
+        if (strstr(k.data.buf, ";OK" ESC)) {
+            return true;
+        }
+
+        char response[50];
+        snprintf(response, 50, ESC "_Gi=%i;", id);
+
+        for (int i = strlen(response), j = 0; i < k.data.r + 1; ++i) {
+            if (k.data.buf[i] > 31) {
+                error_msg[j++] = k.data.buf[i];
+            } else {
+                error_msg[j++] = 0;
+                break;
+	    }
+        }
+
+	die(error_msg);
     }
+
+    return false;
 }
 
 #endif /* end of include guard: KITTY_EXTRA */
