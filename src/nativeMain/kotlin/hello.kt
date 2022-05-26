@@ -30,30 +30,27 @@ fun main() {
         }
 
         local_exec = check_local_execution().let {
-            kitty_restore_termios()
             if (it) {
-                println("* Local execution detected.")
+                println2("* Local execution detected.")
             } else {
-                println("* Non-local execution detected.")
+                println2("* Non-local execution detected.")
             }
-            kitty_setup_termios()
             it;
         }
 
-        val moo = store_image(1, "./assets/moo.png").let {
-            kitty_restore_termios()
+        store_image(1, "./assets/cow_large.png").let {
             if (it) {
-                println("* Image stored successfully.")
+                display_image(1).let {
+                    if (it) println2("\n* Image displayed.")
+                }
             } else {
-                println("* Image couldn't be stored.")
+                println2("* Image couldn't be stored.")
             }
-            kitty_setup_termios()
         }
 
         kitty_restore_termios();
         println("* Window size is $width x $height.")
         println("* Graphics support is OK.")
-        //print_error_msg();
 
         return;
     }

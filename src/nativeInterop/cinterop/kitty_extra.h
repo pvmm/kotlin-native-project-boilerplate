@@ -19,7 +19,7 @@ static void print_error_msg()
     if (error_msg[0]) {
         kitty_restore_termios();
         printf("* %s\n", error_msg);
-	kitty_setup_termios();
+        kitty_setup_termios();
     }
 }
 
@@ -32,7 +32,15 @@ static void die(const char* msg)
 }
 
 
-static bool get_window_size(struct winsize *sz)
+static void println2(const char* msg)
+{
+    kitty_restore_termios();
+    printf("%s\n", msg);
+    kitty_setup_termios();
+}
+
+
+static bool get_window_size(struct winsize* sz)
 {
     ioctl(0, TIOCGWINSZ, sz);
     if (sz->ws_xpixel && sz->ws_ypixel) {
@@ -100,14 +108,14 @@ static bool check_local_execution()
             }
         }
 
-	die(error_msg);
+        die(error_msg);
     }
 
     return false;
 }
 
 
-static bool store_image(int id, const char *fname)
+static bool store_image(unsigned int id, const char* fname)
 {
     char buf[PATH_MAX];
     const size_t BASE64_SIZE = ((PATH_MAX + 2) / 3) * 4;
@@ -119,10 +127,8 @@ static bool store_image(int id, const char *fname)
 
     // prepare query
     char local_query[BASE64_SIZE + 25];
-    snprintf(local_query, BASE64_SIZE + 25, ESC "_Gi=%i,f=100,t=f;%s" ESC BKS, id, buf64);
-    line line = { 0, { 0 }};
-
-    line = kitty_send_term(local_query);
+    snprintf(local_query, BASE64_SIZE + 25, ESC "_Gi=%u,f=100,t=f;%s" ESC BKS, id, buf64);
+    line line = kitty_send_term(local_query);
     kdata k = kitty_parse_response(line);
 
     if (k.data.r > 0) {
@@ -131,7 +137,7 @@ static bool store_image(int id, const char *fname)
         }
 
         char response[50];
-        snprintf(response, 50, ESC "_Gi=%i;", id);
+        snprintf(response, 50, ESC "_Gi=%u;", id);
 
         for (int i = strlen(response), j = 0; i < k.data.r + 1; ++i) {
             if (k.data.buf[i] > 31) {
@@ -139,13 +145,85 @@ static bool store_image(int id, const char *fname)
             } else {
                 error_msg[j++] = 0;
                 break;
-	    }
+            }
         }
 
-	die(error_msg);
+        die(error_msg);
     }
 
     return false;
+}
+
+
+struct Image {
+    unsigned int id;
+    unsigned int placement;
+    unsigned int zindex;
+};
+
+static bool _image_cmd(const char* command, struct Image* data)
+{
+    line line = kitty_send_term(command);
+    kdata k = kitty_parse_response(line);
+
+    if (k.data.r > 0) {
+        if (strstr(k.data.buf, ";OK" ESC)) {
+            return true;
+        }
+
+        char response[50];
+        if (!data->placement) {
+            snprintf(response, 50, ESC "_Gi=%u;", data->id);
+        } else {
+            snprintf(response, 50, ESC "_Gi=%u,p=%u;", data->id, data->placement);
+        }
+
+        for (int i = strlen(response), j = 0; i < k.data.r + 1; ++i) {
+            if (k.data.buf[i] > 31) {
+                error_msg[j++] = k.data.buf[i];
+            } else {
+                error_msg[j++] = 0;
+                break;
+            }
+        }
+
+        die(error_msg);
+    }
+
+    return false;
+}
+
+
+static bool display_image(unsigned int id)
+{
+    struct Image data = { id, 0, 0 };
+
+    // prepare command
+    char command[25];
+    snprintf(command, 25, ESC "_Ga=p,i=%u" ESC BKS, id);
+    return _image_cmd(command, &data);
+}
+
+
+static bool display_image2(unsigned int id, unsigned int placement)
+{
+    struct Image data = { id, placement, 0 };
+
+    // prepare command
+    char command[25];
+    snprintf(command, 25, ESC "_Ga=p,i=%u,p=%u" ESC BKS, id, placement);
+    return _image_cmd(command, &data);
+}
+
+
+static bool display_image3(unsigned int id, unsigned int placement, unsigned int zindex)
+{
+    struct Image data = { id, placement, zindex };
+
+    // prepare command
+    char command[25];
+    snprintf(command, 25, ESC "_Ga=p,i=%u,p=%u,z=%u" ESC BKS, id, placement, zindex);
+    return _image_cmd(command, &data);
 }
 
 #endif /* end of include guard: KITTY_EXTRA */
