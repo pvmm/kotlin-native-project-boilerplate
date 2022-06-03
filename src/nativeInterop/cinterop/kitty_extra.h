@@ -223,6 +223,20 @@ static bool _image_cmd(const char* command, struct Image* data)
 }
 
 
+static bool free_image(unsigned int id)
+{
+    // prepare command
+    char command[20];
+    if (id) {
+        snprintf(command, 20, ESC "_Ga=d,d=I,i=%u" ESC BKS, id);
+    } else {
+        snprintf(command, 20, ESC "_Ga=d,d=A" ESC BKS);
+    }
+
+    return _image_cmd(command, NULL);
+}
+
+
 static bool display_image(unsigned int id)
 {
     struct Image data = { id, 0, 0, false, {}, false, {} };
