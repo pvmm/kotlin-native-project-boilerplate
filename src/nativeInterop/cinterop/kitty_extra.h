@@ -156,29 +156,55 @@ static bool store_image(unsigned int id, const char* fname)
 
 
 struct Image {
-    int x;
-    int y;
     unsigned int id;
     unsigned int placement;
     unsigned int zindex;
+
+    bool cell_offset;
+    struct {
+        int x, y;
+    } cell_offset_data;
+
+    bool viewport;
+    struct {
+        int x, y, w, h;
+    } viewport_data;
 };
 
 
-static bool _display_image_cmd(const char* command, struct Image* data)
+static bool _image_cmd(const char* command, struct Image* data)
 {
     line line = kitty_send_term(command);
     kdata k = kitty_parse_response(line);
 
     if (k.data.r > 0) {
+        char response[50];
+
         if (strstr(k.data.buf, ";OK" ESC)) {
             return true;
         }
 
-        char response[50];
-        if (!data->placement) {
-            snprintf(response, 50, ESC "_Gi=%u;", data->id);
-        } else {
-            snprintf(response, 50, ESC "_Gi=%u,p=%u;", data->id, data->placement);
+        if (data != NULL) {
+            char cell_offset[20];
+            char viewport[20];
+
+            if (data->cell_offset) {
+                snprintf(cell_offset, 20, ",X=%u,Y=%u", data->cell_offset_data.x, data->cell_offset_data.y);
+            } else {
+                cell_offset[0] = '\0';
+            }
+
+            if (data->viewport) {
+                snprintf(viewport, 20, ",x=%u,y=%u,w=%u,h=%u", data->viewport_data.x, data->viewport_data.y, data->viewport_data.w, data->viewport_data.h);
+            } else {
+                viewport[0] = '\0';
+            }
+
+            if (!data->placement) {
+                snprintf(response, 50, ESC "_Gi=%u%s%s;", data->id, cell_offset, viewport);
+            } else {
+                snprintf(response, 50, ESC "_Gi=%u,p=%u%s%s;", data->id, data->placement, cell_offset, viewport);
+            }
         }
 
         for (int i = strlen(response), j = 0; i < k.data.r + 1; ++i) {
@@ -199,34 +225,51 @@ static bool _display_image_cmd(const char* command, struct Image* data)
 
 static bool display_image(unsigned int id)
 {
-    struct Image data = { 0, 0, id, 0, 0 };
+    struct Image data = { id, 0, 0, false, {}, false, {} };
 
     // prepare command
     char command[25];
     snprintf(command, 25, ESC "_Ga=p,i=%u" ESC BKS, id);
-    return _display_image_cmd(command, &data);
+    return _image_cmd(command, &data);
 }
 
 
 static bool display_image2(unsigned int id, unsigned int placement)
 {
-    struct Image data = { 0, 0, id, placement, 0 };
+    struct Image data = { id, placement, 0, false, {}, false, {} };
 
     // prepare command
     char command[25];
     snprintf(command, 25, ESC "_Ga=p,i=%u,p=%u" ESC BKS, id, placement);
-    return _display_image_cmd(command, &data);
+    return _image_cmd(command, &data);
 }
 
 
 static bool display_image3(unsigned int id, unsigned int placement, unsigned int zindex)
 {
-    struct Image data = { 0, 0, id, placement, zindex };
+    struct Image data = { id, placement, zindex, false, {}, false, {} };
 
     // prepare command
     char command[25];
     snprintf(command, 25, ESC "_Ga=p,i=%u,p=%u,z=%u" ESC BKS, id, placement, zindex);
     return _image_cmd(command, &data);
+}
+
+
+static bool hide_image(unsigned int id, unsigned int placement)
+{
+    // prepare command
+    char command[20];
+    if (!id) {
+        snprintf(command, 20, ESC "_Ga=d,d=a" ESC BKS);
+    } else {
+        if (placement) {
+            snprintf(command, 20, ESC "_Ga=d,d=i,i=%u,p=%u" ESC BKS, id, placement);
+        } else {
+            snprintf(command, 20, ESC "_Ga=d,d=i,i=%u" ESC BKS, id);
+        }
+    }
+    return _image_cmd(command, NULL);
 }
 
 #endif /* end of include guard: KITTY_EXTRA */
