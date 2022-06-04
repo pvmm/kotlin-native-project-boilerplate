@@ -292,7 +292,7 @@ static bool _image_cmd(const char* command, struct Image* data)
 }
 
 
-static bool free_image(unsigned int id)
+static bool kitty_free_image(unsigned int id)
 {
     // prepare command
     char command[20];
