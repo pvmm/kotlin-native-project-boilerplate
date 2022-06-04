@@ -4,6 +4,13 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.cValue
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.staticCFunction
+
+
+fun term_handler()
+{
+    println("terminal changed.");
+}
 
 
 fun main() {
@@ -17,6 +24,9 @@ fun main() {
 	if (!kitty_create_context(ctx.ptr)) {
             kitty_die("Kitty required: window size is unknown.")
 	} 
+
+	/* Set terminal handler */
+        kitty_set_term_handler(staticCFunction<Unit> { term_handler() });
 
         if (!kitty_check_graphics_support()) {
             kitty_die("Kitty required: graphics support not supported.")

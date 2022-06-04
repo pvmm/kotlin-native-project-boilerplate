@@ -10,27 +10,11 @@
 #include <string.h>
 #include <signal.h>
 
+
 #define ESC "\x1B" /* ESCAPE */
 #define BKS "\x5c" /* BACKSLASH */
 
 char error_msg[256] = "\0";
-
-
-static void kitty_println(const char* msg);
-static bool kitty_get_window_size(struct winsize* sz);
-
-
-void _signal_handler(int signum) {
-    char *msg[50];
-    snprintf(msg, "Interrupt signal (%u) received.", signum);
-    kitty_println(msg);
-
-    // cleanup and close up stuff here
-    // terminate program
-
-    exit(signum);
-}
-
 
 typedef struct /* using Kotlin naming convention */
 {
@@ -40,14 +24,43 @@ typedef struct /* using Kotlin naming convention */
 	unsigned int height;
 	unsigned int cellWidth;
 	unsigned int cellHeight;
+
 } KittyContext;
+
+KittyContext _ctx = { 0, 0, 0, 0, 0, 0 };
+
+void (*_term_handler)(void) = NULL;
+
+static void kitty_println(const char* msg);
+
+static bool kitty_get_window_size(struct winsize* sz);
+
+
+static void kitty_set_term_handler(void (*function)(void))
+{
+    _term_handler = function;
+}
+
+
+void _signal_handler(int signum) {
+    char* msg[100];
+    snprintf(msg, 100, "Interrupt signal (%u) received.", signum);
+    kitty_println(msg);
+
+    if (signum == SIGWINCH && _term_handler) {
+        _term_handler();
+    } else {
+        kitty_restore_termios();
+        exit(0);
+    }
+}
 
 
 static bool kitty_create_context(KittyContext* ctx)
 {
     kitty_setup_termios();
 
-    // register signal SIGINT and signal handler
+    // register terminal changed signal (SIGWINCH)
     signal(SIGWINCH, _signal_handler);
 
     struct winsize sz;
@@ -65,7 +78,7 @@ static bool kitty_create_context(KittyContext* ctx)
 }
 
 
-static void print_error_msg()
+static void kitty_print_error_msg()
 {
     if (error_msg[0]) {
         kitty_restore_termios();
