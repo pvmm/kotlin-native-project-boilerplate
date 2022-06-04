@@ -1,10 +1,13 @@
+FILE := $(shell ./get-path.sh)
+SOURCE := $(shell find . -name "*.h") $(shell find . -name "*.c") $(shell find . -name "*.kt")
+FULLPATH := ./build/bin/native/debugExecutable/$(FILE).kexe
 
 .PHONY: all
-all:
-	gradle clean nativeBinaries
+all: $(SOURCE)
+	gradle nativeBinaries
 
-run: build/bin/native/debugExecutable/native-sample.kexe
-	./build/bin/native/debugExecutable/native-sample.kexe
+run: all
+	kitty --hold $(FULLPATH)
 
 clean:
 	gradle clean

@@ -11,13 +11,11 @@ import kotlinx.cinterop.pointed
 
 fun term_handler()
 {
-    println("terminal changed.");
+    println("terminal changed!");
 }
 
 
 fun main() {
-    var local_exec : Boolean?
-
     memScoped {
         val ctx : CPointer<KittyContext>? = kitty_create_context().let {
             if (it == null) kitty_die("Kitty required: window size is unknown.")
@@ -31,7 +29,7 @@ fun main() {
             kitty_die("Kitty required: graphics not supported.")
         }
 
-        local_exec = kitty_check_local_execution().let {
+        kitty_check_local_execution().let {
             if (it) {
                 kitty_println("* Local execution detected.")
             } else {
@@ -43,7 +41,7 @@ fun main() {
         kitty_store_image(1, "./assets/cow_large.png").let {
             if (it) {
                 kitty_display_image(1).let {
-                    if (it) kitty_println("\n* Image displayed.")
+                    if (it) kitty_println("\n* Image displayed (\"mooo!\").")
                 }
             } else {
                 kitty_println("* Image couldn't be stored.")
@@ -53,8 +51,7 @@ fun main() {
         kitty_restore_termios()
 
         ctx?.pointed?.apply {
-            println("* Window size is ${width} x ${height}.")
-            println("* Window size is ${cols} x ${rows} cells.")
+            println("* Window size is ${width} x ${height} (${cols} x ${rows} cells).")
             println("* Cell size is ${cellWidth} x ${cellHeight}.")
         }
 
