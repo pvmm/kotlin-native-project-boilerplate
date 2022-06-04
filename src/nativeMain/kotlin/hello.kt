@@ -5,6 +5,8 @@ import kotlinx.cinterop.cValue
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
+import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.pointed
 
 
 fun term_handler()
@@ -17,19 +19,16 @@ fun main() {
     var local_exec : Boolean?
 
     memScoped {
-        val ctx = alloc<KittyContext> {
-            rows = 0u; cols = 0u; width = 0u; height = 0u; cellWidth = 0u; cellHeight = 0u
+        val ctx : CPointer<KittyContext>? = kitty_create_context().let {
+            if (it == null) kitty_die("Kitty required: window size is unknown.")
+            it
         }
 
-	if (!kitty_create_context(ctx.ptr)) {
-            kitty_die("Kitty required: window size is unknown.")
-	} 
-
-	/* Set terminal handler */
+        /* Set terminal handler */
         kitty_set_term_handler(staticCFunction<Unit> { term_handler() });
 
         if (!kitty_check_graphics_support()) {
-            kitty_die("Kitty required: graphics support not supported.")
+            kitty_die("Kitty required: graphics not supported.")
         }
 
         local_exec = kitty_check_local_execution().let {
@@ -52,9 +51,13 @@ fun main() {
         }
 
         kitty_restore_termios()
-        println("* Window size is ${ctx.width} x ${ctx.height}.")
-        println("* Window size is ${ctx.cols} x ${ctx.rows} cells.")
-        println("* Cell size is ${ctx.cellWidth} x ${ctx.cellHeight}.")
+
+        ctx?.pointed?.apply {
+            println("* Window size is ${width} x ${height}.")
+            println("* Window size is ${cols} x ${rows} cells.")
+            println("* Cell size is ${cellWidth} x ${cellHeight}.")
+        }
+
         println("* Graphics support is OK.")
     }
 

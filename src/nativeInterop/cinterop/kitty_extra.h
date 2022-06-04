@@ -56,7 +56,7 @@ void _signal_handler(int signum) {
 }
 
 
-static bool kitty_create_context(KittyContext* ctx)
+static KittyContext* kitty_create_context()
 {
     kitty_setup_termios();
 
@@ -65,16 +65,16 @@ static bool kitty_create_context(KittyContext* ctx)
 
     struct winsize sz;
     if (kitty_get_window_size(&sz)) {
-        ctx->rows = sz.ws_row;
-        ctx->cols = sz.ws_col;
-        ctx->width = sz.ws_xpixel;
-        ctx->height = sz.ws_ypixel;
-        ctx->cellWidth = sz.ws_xpixel / sz.ws_col;
-        ctx->cellHeight = sz.ws_ypixel / sz.ws_row;
-        return true;
+        _ctx.rows = sz.ws_row;
+        _ctx.cols = sz.ws_col;
+        _ctx.width = sz.ws_xpixel;
+        _ctx.height = sz.ws_ypixel;
+        _ctx.cellWidth = sz.ws_xpixel / sz.ws_col;
+        _ctx.cellHeight = sz.ws_ypixel / sz.ws_row;
+        return &_ctx;
     }
 
-    return false;
+    return NULL;
 }
 
 
@@ -224,12 +224,12 @@ struct Image {
     unsigned int placement;
     unsigned int zindex;
 
-    bool cell_offset;
+    bool use_offset;
     struct {
         int x, y;
-    } cell_offset_data;
+    } offset_data;
 
-    bool viewport;
+    bool use_viewport;
     struct {
         int x, y, w, h;
     } viewport_data;
@@ -252,13 +252,18 @@ static bool _image_cmd(const char* command, struct Image* data)
             char cell_offset[20];
             char viewport[20];
 
-            if (data->cell_offset) {
-                snprintf(cell_offset, 20, ",X=%u,Y=%u", data->cell_offset_data.x, data->cell_offset_data.y);
+            if (data->use_offset) {
+                int x = _ctx.cellWidth / data->offset_data.x;
+                int off_x = _ctx.cellWidth % data->offset_data.x;
+                int y = _ctx.cellHeight / data->offset_data.y;
+                int off_y = _ctx.cellHeight % data->offset_data.y;
+                kitty_set_position(x, y);
+                snprintf(cell_offset, 20, ",X=%u,Y=%u", off_x, off_y);
             } else {
                 cell_offset[0] = '\0';
             }
 
-            if (data->viewport) {
+            if (data->use_viewport) {
                 snprintf(viewport, 20, ",x=%u,y=%u,w=%u,h=%u", data->viewport_data.x, data->viewport_data.y, data->viewport_data.w, data->viewport_data.h);
             } else {
                 viewport[0] = '\0';
