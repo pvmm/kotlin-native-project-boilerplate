@@ -42,7 +42,8 @@ static void kitty_set_term_handler(void (*function)(void))
 }
 
 
-void _signal_handler(int signum) {
+void _signal_handler(int signum)
+{
     char* msg[100];
     snprintf(msg, 100, "Interrupt signal (%u) received.", signum);
     kitty_println(msg);
@@ -219,7 +220,8 @@ static bool kitty_store_image(unsigned int id, const char* fname)
 }
 
 
-struct Image {
+struct Image
+{
     unsigned int id;
     unsigned int placement;
     unsigned int zindex;
